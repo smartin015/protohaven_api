@@ -290,14 +290,47 @@ class Connector:  # pylint: disable=too-many-public-methods
     @lru_cache(maxsize=1)
     def wyze_client(self):
         """Create and return the Wyze client"""
-        # Need to do get_config('wyze/expiration') warning. Automate renewal?
+        # Check if credentials are expired
+        expiration_str = get_config("wyze/expiration")
+        if expiration_str:
+            try:
+                expiration_date = datetime.datetime.strptime(
+                    expiration_str, "%m-%d-%Y %H:%M:%S"
+                )
+                current_date = datetime.datetime.now()
+                if current_date > expiration_date:
+                    log.warning(
+                        f"Wyze API credentials expired on {expiration_str}. "
+                        f"Authentication may fail. Credentials need to be regenerated."
+                    )
+            except (ValueError, TypeError) as e:
+                log.warning(
+                    f"Could not parse Wyze expiration date '{expiration_str}': {e}"
+                )
+
         cli = Client()
-        cli.login(
-            email=get_config("wyze/email"),
-            password=get_config("wyze/password"),
-            key_id=get_config("wyze/key_id"),
-            api_key=get_config("wyze/api_key"),
-        )
+        try:
+            cli.login(
+                email=get_config("wyze/email"),
+                password=get_config("wyze/password"),
+                key_id=get_config("wyze/key_id"),
+                api_key=get_config("wyze/api_key"),
+            )
+        except Exception as e:
+            if "Invalid credentials" in str(e) or "400" in str(e):
+                log.error(
+                    f"Wyze API authentication failed. Credentials may be invalid or expired. "
+                    f"Expiration date: {expiration_str}. Error: {e}"
+                )
+                # Provide instructions for regenerating credentials
+                log.error(
+                    "To fix this, regenerate Wyze API credentials:\n"
+                    "1. Log into the Wyze account at https://www.wyze.com\n"
+                    "2. Generate new API credentials\n"
+                    "3. Update WYZE_KEY_ID, WYZE_API_KEY, and WYZE_PASSWORD in .env.secret\n"
+                    "4. Update the expiration date in config.yaml"
+                )
+            raise
         return cli
 
     def gcal_request(
