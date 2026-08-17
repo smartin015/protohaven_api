@@ -756,7 +756,9 @@ def get_policy_violations():
     return [v for v in rows if v["fields"].get("Onset")]
 
 
-def _fmt_evidence(evidence):
+def _fmt_evidence(
+    evidence: Iterable[str],
+) -> list[dict[str, str]] | str | None:
     """Normalize evidence input to the format expected by the active DB backend.
 
     Airtable stores evidence as attachments; NocoDB's snapshot stores it as text.
@@ -771,7 +773,7 @@ def _fmt_evidence(evidence):
     return [{"url": u} for u in urls]
 
 
-def _fmt_neon_id(neon_id):
+def _fmt_neon_id(neon_id: Any) -> int | str | None:
     """Normalize an optional Neon ID for Airtable/NocoDB number fields."""
     if neon_id is None or neon_id == "":
         return None
@@ -784,14 +786,14 @@ def _fmt_neon_id(neon_id):
 
 
 def open_violation(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    reporter,
-    neon_id,
-    sections,
-    evidence,
-    onset,
-    fee,
-    notes,
-    tag_number=None,
+    reporter: str,
+    neon_id: Any,
+    sections: Iterable[str],
+    evidence: Iterable[str],
+    onset: datetime.datetime,
+    fee: float,
+    notes: str,
+    tag_number: int | str | None = None,
 ):
     """Opens a new violation with a fee schedule.
 
@@ -819,7 +821,13 @@ def open_violation(  # pylint: disable=too-many-arguments,too-many-positional-ar
     return insert_records([fields], "policy_enforcement", "violations")
 
 
-def close_violation(violation_id, closer, resolution, notes, fees_outstanding=False):
+def close_violation(
+    violation_id: str,
+    closer: str,
+    resolution: datetime.datetime,
+    notes: str,
+    fees_outstanding: bool = False,
+):
     """Close out a violation by creating a closure record.
 
     The closure table has a link back to the violation, which populates the

@@ -5,6 +5,7 @@ import json
 import logging
 import re
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 from concurrent import futures
 from functools import lru_cache
 from typing import Any
@@ -159,7 +160,7 @@ def techs_members():
     ]
 
 
-def _neon_id_str(neon_id):
+def _neon_id_str(neon_id: Any) -> str | None:
     """Normalize a Neon ID from Airtable/NocoDB for display/lookup purposes."""
     if neon_id is None:
         return None
@@ -168,7 +169,7 @@ def _neon_id_str(neon_id):
     return str(neon_id).strip() or None
 
 
-def _linked_ids(value):
+def _linked_ids(value: Any) -> list[str]:
     """Normalize linked-record values to a list of string record IDs."""
     if not value:
         return []
@@ -183,7 +184,7 @@ def _linked_ids(value):
     return result
 
 
-def _evidence_urls(value):
+def _evidence_urls(value: Any) -> list[str]:
     """Normalize evidence attachments/text into a list of URLs for the UI."""
     if not value:
         return []
@@ -198,7 +199,9 @@ def _evidence_urls(value):
     return result
 
 
-def _unpaid_fee_map(fees):
+def _unpaid_fee_map(
+    fees: Iterable[dict[str, Any]],
+) -> defaultdict[str, float]:
     """Return a mapping of violation record ID to unpaid fee total."""
     result: defaultdict[str, float] = defaultdict(float)
     for f in fees:
@@ -212,7 +215,11 @@ def _unpaid_fee_map(fees):
     return result
 
 
-def _violation_to_dict(v, section_map, fee_map):
+def _violation_to_dict(
+    v: dict[str, Any],
+    section_map: Mapping[str, str],
+    fee_map: Mapping[str, float],
+) -> dict[str, Any]:
     """Convert an Airtable/NocoDB violation record into a UI-safe dict.
 
     Neon IDs are intentionally omitted from the response; the UI only shows the
@@ -264,7 +271,7 @@ def _violation_to_dict(v, section_map, fee_map):
     Role.SHOP_TECH,
     redirect_to_login=False,
 )
-def techs_violation_sections():
+def techs_violation_sections() -> list[dict[str, Any]]:
     """Return policy sections available for a new violation."""
     return [
         {
@@ -285,7 +292,7 @@ def techs_violation_sections():
     Role.SHOP_TECH,
     redirect_to_login=False,
 )
-def techs_violations():
+def techs_violations() -> list[dict[str, Any]]:
     """Return open and recently closed policy violations for the techs page."""
     section_map = {
         str(s["id"]): s.get("fields", {}).get("Section") or str(s["id"])
@@ -313,7 +320,9 @@ def techs_violations():
     Role.SHOP_TECH,
     redirect_to_login=False,
 )
-def techs_open_violation():  # pylint: disable=too-many-return-statements
+def techs_open_violation() -> (
+    Response | dict[str, bool]
+):  # pylint: disable=too-many-return-statements
     """Open a new violation from the techs dashboard."""
     data = request.get_json(silent=True) or {}
     reporter = (data.get("reporter") or "").strip()
@@ -363,7 +372,9 @@ def techs_open_violation():  # pylint: disable=too-many-return-statements
     Role.SHOP_TECH,
     redirect_to_login=False,
 )
-def techs_close_violation(violation_id):
+def techs_close_violation(
+    violation_id: str,
+) -> Response | dict[str, bool]:
     """Close out a violation by creating a closure record."""
     data = request.get_json(silent=True) or {}
     closer = (data.get("closer") or "").strip()
