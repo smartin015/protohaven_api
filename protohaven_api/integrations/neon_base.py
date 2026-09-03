@@ -250,7 +250,9 @@ class NeonOne:  # pylint: disable=too-few-public-methods
         log.info("Submitting the MFA code form")
         page.click("button[type='submit']")
 
-        page.wait_for_url("**/contentList.do")  # Change to your expected post-login URL
+        page.wait_for_url(
+            "**/admin/dashboards/list"
+        )  # Change to your expected post-login URL
 
         log.info("Login successful!")
 
