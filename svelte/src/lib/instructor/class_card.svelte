@@ -39,7 +39,7 @@
 		registration_date?: string;
 	}
 
-	interface NeonState {
+	interface EventState {
 		publishEvent?: boolean;
 		archived?: boolean;
 	}
@@ -52,7 +52,7 @@
 
 	let attendees: Attendee[] = [];
 
-	function fetch_neon_state(data: ClassData): Promise<NeonState> | null {
+	function fetch_event_state(data: ClassData): Promise<EventState> | null {
 		if (data.event_id) {
 			console.log('Fetching state for', data.event_id);
 			return get('/instructor/class/neon_state?id=' + encodeURIComponent(data.event_id)).then(
@@ -87,7 +87,8 @@
 		return [];
 	}
 	let promise: Promise<Attendee[]> = meta_promise.then(fetch_attendees);
-	let state_promise: Promise<NeonState | null> = meta_promise.then(fetch_neon_state);
+	let event_state_promise: Promise<EventState | null> =
+		meta_promise.then(fetch_event_state);
 
 	function refresh(event_id: string | null | undefined): Promise<Attendee[]> {
 		if (event_id) {
@@ -99,7 +100,7 @@
 	function confirm(pub: boolean) {
 		meta_promise = post('/instructor/class/update', { eid: schedule_id, pub });
 		promise = meta_promise.then(fetch_attendees);
-		state_promise = meta_promise.then(fetch_neon_state);
+		event_state_promise = meta_promise.then(fetch_event_state);
 	}
 
 	function submit_log(url: string | undefined) {
@@ -116,20 +117,20 @@
 	function supply(ok: boolean) {
 		meta_promise = post('/instructor/class/supply_req', { eid: schedule_id, missing: !ok });
 		promise = meta_promise.then(fetch_attendees);
-		state_promise = meta_promise.then(fetch_neon_state);
+		event_state_promise = meta_promise.then(fetch_event_state);
 	}
 
 	function volunteer(v: boolean) {
 		meta_promise = post('/instructor/class/volunteer', { eid: schedule_id, volunteer: v });
 		promise = meta_promise.then(fetch_attendees);
-		state_promise = meta_promise.then(fetch_neon_state);
+		event_state_promise = meta_promise.then(fetch_event_state);
 	}
 
 	function cancel(class_id: string | undefined) {
 		// Note: class_id here is the scheduled class ID
 		meta_promise = post('/instructor/class/cancel', { class_id });
 		promise = meta_promise.then(fetch_attendees);
-		state_promise = meta_promise.then(fetch_neon_state);
+		event_state_promise = meta_promise.then(fetch_event_state);
 	}
 </script>
 
@@ -163,12 +164,12 @@
 			{#if !c.event_id}
 				<Tooltip target={schedule_id} placement="right">
 					Proposed classes are not guaranteed to run; they aren't yet available for people to
-					register in Neon. Click the ? icon for more details.
+					register on Eventbrite. Click the ? icon for more details.
 				</Tooltip>
 			{/if}
 		</CardHeader>
 		<CardBody>
-			{#await state_promise}
+			{#await event_state_promise}
 				<Spinner />
 			{:then p}
 				{#if p && (!p.publishEvent || p.archived)}
@@ -176,7 +177,7 @@
 				{/if}
 			{:catch error}
 				<Alert color="warning" class="mx-3"
-					>Error fetching state from Neon: {error.message.substr(0, 128)}</Alert
+					>Error fetching state from Eventbrite: {error.message.substr(0, 128)}</Alert
 				>
 			{/await}
 

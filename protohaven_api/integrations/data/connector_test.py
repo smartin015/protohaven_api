@@ -88,24 +88,13 @@ def test_airtable_meta_request(mocker, c):
     )
 
 
-def test_neon_request_attendees_endpoint(mocker, c):
-    """Ensure /attendees is ratelimited via cache_server_request"""
+def test_neon_request_ok(mocker, c):
+    """A successful Neon request is returned directly"""
     con.requests.request.return_value = mocker.Mock(
         status_code=200, json=lambda: {"key": "value"}
     )
     mock_cs = mocker.patch.object(c, "cache_server_request")
-    assert c.neon_request("api_key", "/attendees") == {"key": "value"}
-    con.requests.request.assert_called_once()  # pylint: disable=no-member
-    mock_cs.assert_called_once_with("/neon_ratelimit_ok", {})
-
-
-def test_neon_request_non_attendees_endpoint(mocker, c):
-    """Test endpoint without ratelimiting"""
-    con.requests.request.return_value = mocker.Mock(
-        status_code=200, json=lambda: {"key": "value"}
-    )
-    mock_cs = mocker.patch.object(c, "cache_server_request")
-    assert c.neon_request("api_key", "/other_endpoint") == {"key": "value"}
+    assert c.neon_request("api_key", "/accounts/1") == {"key": "value"}
     con.requests.request.assert_called_once()  # pylint: disable=no-member
     mock_cs.assert_not_called()
 
