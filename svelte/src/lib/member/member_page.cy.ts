@@ -17,6 +17,8 @@ function mountPage(roles: string[], recertBody: unknown, recertStatus = 200) {
 		body: recertBody
 	}).as('recert');
 
+	cy.intercept('GET', '**/class_listing', { body: [] }).as('classListing');
+
 	cy.mount(MemberPage);
 	cy.wait('@whoami');
 	cy.wait('@recert');
