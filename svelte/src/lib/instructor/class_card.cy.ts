@@ -4,7 +4,7 @@ function mountClassCard(props: Record<string, unknown> = {}, attendees: unknown[
 	cy.intercept('GET', '**/instructor/class/attendees*', { body: attendees }).as('attendees');
 	cy.intercept('GET', '**/instructor/class/neon_state*', {
 		body: { publishEvent: true, archived: false }
-	}).as('neonState');
+	}).as('eventState');
 
 	const base = {
 		schedule_id: 'sched-1',
@@ -28,7 +28,7 @@ function mountClassCard(props: Record<string, unknown> = {}, attendees: unknown[
 
 	cy.mount(ClassCard, { props: merged });
 	cy.wait('@attendees');
-	cy.wait('@neonState');
+	cy.wait('@eventState');
 }
 
 function mountProposedClass(props: Record<string, unknown> = {}) {

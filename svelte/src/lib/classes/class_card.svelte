@@ -51,9 +51,7 @@
 	export let c: ClassListingItem;
 
 	function open_signup() {
-		const url =
-			'https://protohaven.app.neoncrm.com/np/clients/protohaven/eventRegistration.jsp?event=' +
-			String(c['id']);
+		const url = `https://www.eventbrite.com/e/${String(c['id'])}/`;
 		window.open(url, '_blank');
 	}
 
