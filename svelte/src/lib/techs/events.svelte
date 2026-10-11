@@ -211,7 +211,7 @@
 								On {new Date(r.start).toLocaleString('en-US', { timeZone: 'America/New_York' })}
 							</div>
 							<div>
-								<a href={`https://protohaven.org/e/${r.id}`} target="_blank">Event Details</a>
+								<a href={`https://www.eventbrite.com/e/${r.id}/`} target="_blank">Event Details</a>
 							</div>
 							<div>{r.capacity - (r.attendee_count ?? r.attendees.length)} seat(s) left</div>
 

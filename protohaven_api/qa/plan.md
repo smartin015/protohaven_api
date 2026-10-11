@@ -32,7 +32,7 @@ protohaven_api/qa/
   comms.py             # overrides, advance notice, send assertions
   cleanup.py           # cleanup failure collection + #cronicle-automation notice
   fixtures/
-    neon.py            # mock Neon account/event/membership helpers
+    neon.py            # mock Neon account/membership helpers
     airtable.py        # mock Airtable record helpers
     asana.py           # mock Asana task helpers
     booked.py          # mock Booked resource/user/reservation helpers

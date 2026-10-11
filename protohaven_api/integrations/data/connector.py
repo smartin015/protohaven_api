@@ -47,17 +47,7 @@ class Connector:  # pylint: disable=too-many-public-methods
         auth = (get_config("neon/domain"), api_key)
         # log.info(f"{auth} {args} {kwargs}")
 
-        # Attendee endpoint is often called repeatedly; runs into
-        # neon request ratelimit. Here we globally synchronize and
-        # include a sleep timer to prevent us from overrunning
-        # Note that 4 QPS is reasonable, but as of
-        # 2026-06-23 we're running two workers which use the same
-        # API quota.
         for i in range(self.max_attempts):
-            if "/attendees" in args[0]:
-                # Centralized rate limiting via cache server to prevent
-                # multiple gunicorn workers from overwhelming Neon CRM.
-                self.cache_server_request("/neon_ratelimit_ok", {})
             r = requests.request(*args, **kwargs, auth=auth, timeout=self.timeout)
 
             # It's real weird that Neon returns 222 which is not an official RFC 9110 code
