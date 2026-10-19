@@ -144,6 +144,11 @@
 				You can pay at the front desk via Square - select "Walk-In (3 Hr Class / add price)", set to
 				the cost listed above, charge as normal.
 			</p>
+			<p>
+				Clicking <strong>Register</strong> below will open Eventbrite in a new tab. A 100%
+				discount coupon will be applied automatically for paid classes. Complete the Eventbrite
+				registration using the <strong>same email address you use to sign in at the front desk</strong>.
+			</p>
 			{#await promise}
 				<Spinner />loading...
 			{:then p}
