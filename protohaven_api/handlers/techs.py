@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Site for tech leads to manage shop techs"""
 
 import datetime
@@ -494,25 +495,28 @@ def techs_backfill_events():
         if evt.name.startswith(TECH_ONLY_PREFIX) or evt.attendee_count > 0:
             is_eventbrite = eventbrite.is_valid_id(evt.event_id)
 
-            # Get attendee details for admins
+            # Eventbrite attendees don't have Neon account IDs, so admin
+            # de-registration moves to email. Legacy Neon events retain their
+            # attendee IDs so self-service registration state still resolves.
             attendee_details = []
+            attendee_ids = []
             for attendee in evt.attendees:
                 if attendee.valid:
                     attendee_info = {
-                        "neon_id": None if is_eventbrite else attendee.neon_id,
                         "name": attendee.name,
                         "email": attendee.email,
-                        "is_volunteer": False,
                     }
-                    # Try to get phone number from member account
-                    if is_admin and not is_eventbrite and attendee.neon_id:
-                        try:
-                            member = neon_base.fetch_account(attendee.neon_id)
-                            if member and hasattr(member, "phone") and member.phone:
-                                attendee_info["phone"] = member.phone
-                            attendee_info["is_volunteer"] = member.is_volunteer()
-                        except RuntimeError:
-                            pass  # Silently fail if we can't fetch member data
+                    if not is_eventbrite:
+                        if attendee.neon_id is not None:
+                            attendee_ids.append(attendee.neon_id)
+                        # Try to get phone number from member account
+                        if is_admin and attendee.neon_id:
+                            try:
+                                member = neon_base.fetch_account(attendee.neon_id)
+                                if member and hasattr(member, "phone") and member.phone:
+                                    attendee_info["phone"] = member.phone
+                            except RuntimeError:
+                                pass  # Silently fail if we can't fetch member data
                     attendee_details.append(attendee_info)
 
             for_techs.append(
@@ -520,11 +524,7 @@ def techs_backfill_events():
                     "id": evt.event_id,
                     "ticket_id": evt.single_registration_ticket_id,
                     "name": evt.name,
-                    "attendees": [
-                        a["neon_id"]
-                        for a in attendee_details
-                        if a["neon_id"] is not None
-                    ],
+                    "attendees": attendee_ids,
                     "attendee_emails": [
                         a["email"] for a in attendee_details if a.get("email")
                     ],
@@ -546,21 +546,15 @@ def techs_backfill_events():
     }
 
 
-def _notify_registration(account_id, attendee_neon_id, event_id, action):
+def _notify_registration(actor_name, target_name, event_id, action):
     """Sends notification of state of class to the techs and instructors channels
     when a tech (un)registers to backfill a class."""
-    acc = neon_base.fetch_account(account_id, required=True)
-    target = (
-        acc
-        if account_id == attendee_neon_id
-        else neon_base.fetch_account(attendee_neon_id, required=True)
-    )
     evt = eauto.fetch_event(event_id, attendees=True)
     verb = "registered"
     if action != "register":
         verb = "unregistered"
     msg = (
-        f"{acc.name} {verb} {target.name} via [/techs](https://api.protohaven.org/techs#events): "
+        f"{actor_name} {verb} {target_name} via [/techs](https://api.protohaven.org/techs#events): "
         f"{evt.name} on {evt.start_date.strftime('%a %b %d %-I:%M %p')} "
         f"; {evt.capacity - evt.attendee_count} seat(s) remain"
     )
@@ -578,7 +572,7 @@ def _notify_registration(account_id, attendee_neon_id, event_id, action):
     Role.SHOP_TECH,
     redirect_to_login=False,
 )
-def techs_event_registration():  # pylint: disable=too-many-return-statements,too-many-branches
+def techs_event_registration():  # pylint: disable=too-many-return-statements,too-many-branches,too-many-locals,too-many-statements
     """Register/unregister a shop tech for an event, or admin de-register any attendee"""
     # We want to know who's modifying the schedule, not just the generic shop tech user
     if am_neon_id(get_config("general/shop_tech_neon_id")):
@@ -593,12 +587,7 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
     event_id = data.get("event_id")
     ticket_id = data.get("ticket_id")
     action = data.get("action")
-    attendee_neon_id_raw = data.get("attendee_neon_id")
-    attendee_neon_id = (
-        str(attendee_neon_id_raw).strip()
-        if attendee_neon_id_raw is not None
-        else account_id
-    )
+    attendee_email = data.get("attendee_email")
 
     log.info(f"Attempt to (un)register for event: {account_id} {data}")
     if not account_id:
@@ -612,6 +601,54 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
         # if not ticket_id and action == "register":
         #    return Response("ticket_id required for register action", status=400)
 
+        if action == "unregister" and attendee_email is not None:
+            # Admin de-registration by email. Eventbrite attendees do not have
+            # Neon IDs, so resolve the email back to a Neon account and verify
+            # it belongs to a tech before allowing a lead/admin to remove them.
+            if not am_lead_role():
+                return Response(
+                    "Admin privileges required for admin unregister action", status=403
+                )
+            target_email = str(attendee_email).strip().lower()
+            if not target_email:
+                return Response("attendee_email required", status=400)
+            target = next(
+                (
+                    m
+                    for m in neon.search_members_by_email(target_email)
+                    if m.is_volunteer()
+                ),
+                None,
+            )
+            if target is None:
+                return Response(
+                    f"No tech account found for email {target_email}",
+                    status=400,
+                )
+
+            if eventbrite.is_valid_id(event_id):
+                ret = eventbrite.cancel_attendee_order(event_id, target_email)
+                if ret is None:
+                    return Response(
+                        f"Registration not found for email {target_email} "
+                        f"in event {event_id}",
+                        status=404,
+                    )
+            else:
+                ret = neon.delete_single_ticket_registration(
+                    target.neon_id, event_id
+                ) or {"status": "ok"}
+            actor = neon_base.fetch_account(account_id, required=True)
+            _notify_registration(actor.name, target.name, event_id, action)
+            return ret
+
+        # Self-service register/unregister (and legacy admin register by Neon ID)
+        attendee_neon_id_raw = data.get("attendee_neon_id")
+        attendee_neon_id = (
+            str(attendee_neon_id_raw).strip()
+            if attendee_neon_id_raw is not None
+            else account_id
+        )
         if attendee_neon_id != account_id and not am_lead_role():
             return Response(
                 "Admin privileges required for admin unregister action", status=403
@@ -669,7 +706,21 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
                     attendee_neon_id, event_id
                 ) or {"status": "ok"}
         if ret:
-            _notify_registration(account_id, attendee_neon_id, event_id, action)
+            if eventbrite.is_valid_id(event_id):
+                actor_name = (
+                    member.name
+                    if attendee_neon_id == account_id
+                    else neon_base.fetch_account(account_id, required=True).name
+                )
+                _notify_registration(actor_name, member.name, event_id, action)
+            else:
+                actor = neon_base.fetch_account(account_id, required=True)
+                target = (
+                    actor
+                    if attendee_neon_id == account_id
+                    else neon_base.fetch_account(attendee_neon_id, required=True)
+                )
+                _notify_registration(actor.name, target.name, event_id, action)
             return ret
     else:
         return Response(
