@@ -224,11 +224,6 @@
 								<div>
 									{#if is_registered(r)}
 										<strong>You are registered!</strong>
-										<Button
-											color="secondary"
-											on:click={() => action(r.id, r.ticket_id, 'unregister')}
-											disabled={submitting}>Unregister</Button
-										>
 									{:else if r.capacity - (r.attendee_count ?? r.attendees.length) > 0}
 										<Button
 											color="primary"
