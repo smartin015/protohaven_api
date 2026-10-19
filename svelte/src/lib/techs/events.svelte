@@ -50,8 +50,26 @@
 		if (attendee_email !== null) {
 			data.attendee_email = attendee_email;
 		}
+		// Open the tab synchronously so popup blockers allow it; we point it at
+		// Eventbrite after the backend has generated any short-lived discount code.
+		const newTab = action === 'register' ? window.open('', '_blank') : null;
 		submission = post('/techs/event', data)
-			.then((result) => console.log(result))
+			.then((result) => {
+				console.log(result);
+				if (newTab) {
+					if (result && result.redirect_url) {
+						newTab.location.href = result.redirect_url;
+					} else {
+						newTab.close();
+					}
+				}
+			})
+			.catch((error) => {
+				if (newTab) {
+					newTab.close();
+				}
+				throw error;
+			})
 			.finally(() => {
 				reload();
 				submitting = false;

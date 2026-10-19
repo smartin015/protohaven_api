@@ -655,7 +655,6 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
             )
 
         if eventbrite.is_valid_id(event_id):
-            member = neon_base.fetch_account(attendee_neon_id, required=True)
             if action == "register":
                 evt = eauto.fetch_event(event_id, tickets=True)
                 eb_ticket_id = ticket_id or evt.single_registration_ticket_id
@@ -677,27 +676,22 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
                         f"Ticket class {eb_ticket_id} not found for event {event_id}",
                         status=400,
                     )
-                discount_code = None
+                redirect_url = f"https://www.eventbrite.com/e/{event_id}/"
                 if ticket["price"] > 0:
                     discount_code = eventbrite.generate_discount_code(
-                        event_id, percent_off=100
+                        event_id, percent_off=100, expiration_hours=4
                     )
-                ret = eventbrite.register_attendee(
-                    event_id,
-                    eb_ticket_id,
-                    member.fname,
-                    member.lname,
-                    member.email,
-                    discount_code=discount_code,
+                    redirect_url += f"?discount={discount_code}"
+                return {"redirect_url": redirect_url}
+
+            member = neon_base.fetch_account(attendee_neon_id, required=True)
+            ret = eventbrite.cancel_attendee_order(event_id, member.email)
+            if ret is None:
+                return Response(
+                    f"Registration not found for account {attendee_neon_id} "
+                    f"in event {event_id}",
+                    status=404,
                 )
-            else:
-                ret = eventbrite.cancel_attendee_order(event_id, member.email)
-                if ret is None:
-                    return Response(
-                        f"Registration not found for account {attendee_neon_id} "
-                        f"in event {event_id}",
-                        status=404,
-                    )
         else:
             if action == "register":
                 ret = neon.register_for_event(attendee_neon_id, event_id, ticket_id)

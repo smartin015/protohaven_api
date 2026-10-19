@@ -475,11 +475,8 @@ def test_techs_event_registration_unregister(mocker, tech_client):
 
 
 def test_techs_event_registration_eventbrite_free(mocker, tech_client):
-    """Shop techs can register for a free Eventbrite ticket"""
+    """Shop techs are redirected to a free Eventbrite ticket checkout"""
     event_id = "375402919237"
-    member = mocker.MagicMock(fname="First", lname="Last", email="a@b.com")
-    member.name = "First Last"
-    mocker.patch.object(tl.neon_base, "fetch_account", return_value=member)
     mocker.patch.object(
         tl.eauto,
         "fetch_event",
@@ -488,9 +485,8 @@ def test_techs_event_registration_eventbrite_free(mocker, tech_client):
             ticket_options=[{"id": "tc_free", "name": "General Admission", "price": 0}],
         ),
     )
-    mocker.patch.object(
-        tl.eventbrite, "register_attendee", return_value={"status": "ok"}
-    )
+    mock_generate = mocker.patch.object(tl.eventbrite, "generate_discount_code")
+    mock_register = mocker.patch.object(tl.eventbrite, "register_attendee")
     mocker.patch.object(tl, "_notify_registration")
 
     rep = tech_client.post(
@@ -498,26 +494,15 @@ def test_techs_event_registration_eventbrite_free(mocker, tech_client):
         json={"event_id": event_id, "ticket_id": None, "action": "register"},
     )
 
-    assert rep.json == {"status": "ok"}
-    tl.eventbrite.register_attendee.assert_called_once_with(
-        event_id,
-        "tc_free",
-        "First",
-        "Last",
-        "a@b.com",
-        discount_code=None,
-    )
-    tl._notify_registration.assert_called_once_with(
-        "First Last", "First Last", event_id, "register"
-    )
+    assert rep.json == {"redirect_url": f"https://www.eventbrite.com/e/{event_id}/"}
+    mock_generate.assert_not_called()
+    mock_register.assert_not_called()
+    tl._notify_registration.assert_not_called()
 
 
 def test_techs_event_registration_eventbrite_paid_applies_discount(mocker, tech_client):
-    """Paid Eventbrite tickets get a 100% discount before creating the order"""
+    """Paid Eventbrite tickets get a short-lived 100% discount and checkout URL"""
     event_id = "375402919237"
-    member = mocker.MagicMock(fname="First", lname="Last", email="a@b.com")
-    member.name = "First Last"
-    mocker.patch.object(tl.neon_base, "fetch_account", return_value=member)
     mocker.patch.object(
         tl.eauto,
         "fetch_event",
@@ -529,9 +514,7 @@ def test_techs_event_registration_eventbrite_paid_applies_discount(mocker, tech_
         ),
     )
     mocker.patch.object(tl.eventbrite, "generate_discount_code", return_value="FREE100")
-    mocker.patch.object(
-        tl.eventbrite, "register_attendee", return_value={"status": "ok"}
-    )
+    mock_register = mocker.patch.object(tl.eventbrite, "register_attendee")
     mocker.patch.object(tl, "_notify_registration")
 
     rep = tech_client.post(
@@ -539,21 +522,14 @@ def test_techs_event_registration_eventbrite_paid_applies_discount(mocker, tech_
         json={"event_id": event_id, "ticket_id": None, "action": "register"},
     )
 
-    assert rep.json == {"status": "ok"}
+    assert rep.json == {
+        "redirect_url": f"https://www.eventbrite.com/e/{event_id}/?discount=FREE100"
+    }
     tl.eventbrite.generate_discount_code.assert_called_once_with(
-        event_id, percent_off=100
+        event_id, percent_off=100, expiration_hours=4
     )
-    tl.eventbrite.register_attendee.assert_called_once_with(
-        event_id,
-        "tc_paid",
-        "First",
-        "Last",
-        "a@b.com",
-        discount_code="FREE100",
-    )
-    tl._notify_registration.assert_called_once_with(
-        "First Last", "First Last", event_id, "register"
-    )
+    mock_register.assert_not_called()
+    tl._notify_registration.assert_not_called()
 
 
 def test_techs_event_registration_eventbrite_unregister(mocker, tech_client):
