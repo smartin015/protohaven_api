@@ -83,6 +83,10 @@
 		);
 	}
 
+	function is_eventbrite_id(id) {
+		return Number(id) >= 375402919237;
+	}
+
 	let new_event_form = {
 		name: null,
 		capacity: 6,
@@ -201,29 +205,18 @@
 												{#if attendee.phone}
 													<div>Phone: {attendee.phone}</div>
 												{/if}
-												{#if p.is_admin}
-													<div class="mt-1">
-														<Button
-															color="danger"
-															size="sm"
-															on:click={() => {
-																if (
-																	confirm(
-																		`Are you sure you want to de-register ${attendee.name} from this event?`
-																	)
-																) {
-																	action(r.id, null, 'unregister', attendee.email);
-																}
-															}}
-															disabled={submitting}
-														>
-															De-register
-														</Button>
-													</div>
-												{/if}
+
 											</li>
 										{/each}
 									</ul>
+								</div>
+							{/if}
+
+							{#if p.is_admin && is_eventbrite_id(r.id)}
+								<div class="mt-2">
+									<a href={`https://www.eventbrite.com/myevent?eid=${r.id}`} target="_blank">
+										Manage Eventbrite attendees
+									</a>
 								</div>
 							{/if}
 

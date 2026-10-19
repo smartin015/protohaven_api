@@ -546,24 +546,6 @@ def techs_backfill_events():
     }
 
 
-def _notify_registration(actor_name, target_name, event_id, action):
-    """Sends notification of state of class to the techs and instructors channels
-    when a tech (un)registers to backfill a class."""
-    evt = eauto.fetch_event(event_id, attendees=True)
-    verb = "registered"
-    if action != "register":
-        verb = "unregistered"
-    msg = (
-        f"{actor_name} {verb} {target_name} via [/techs](https://api.protohaven.org/techs#events): "
-        f"{evt.name} on {evt.start_date.strftime('%a %b %d %-I:%M %p')} "
-        f"; {evt.capacity - evt.attendee_count} seat(s) remain"
-    )
-    # Tech-only classes shouldn't bother instructors
-    if not evt.name.startswith(TECH_ONLY_PREFIX):
-        comms.send_discord_message(msg, "#instructors", blocking=False)
-    comms.send_discord_message(msg, "#techs", blocking=False)
-
-
 @page.route("/techs/event", methods=["POST"])
 @require_login_role(
     Role.SHOP_TECH_LEAD,
@@ -638,8 +620,6 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
                 ret = neon.delete_single_ticket_registration(
                     target.neon_id, event_id
                 ) or {"status": "ok"}
-            actor = neon_base.fetch_account(account_id, required=True)
-            _notify_registration(actor.name, target.name, event_id, action)
             return ret
 
         # Self-service register/unregister (and legacy admin register by Neon ID)
@@ -700,21 +680,6 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
                     attendee_neon_id, event_id
                 ) or {"status": "ok"}
         if ret:
-            if eventbrite.is_valid_id(event_id):
-                actor_name = (
-                    member.name
-                    if attendee_neon_id == account_id
-                    else neon_base.fetch_account(account_id, required=True).name
-                )
-                _notify_registration(actor_name, member.name, event_id, action)
-            else:
-                actor = neon_base.fetch_account(account_id, required=True)
-                target = (
-                    actor
-                    if attendee_neon_id == account_id
-                    else neon_base.fetch_account(attendee_neon_id, required=True)
-                )
-                _notify_registration(actor.name, target.name, event_id, action)
             return ret
     else:
         return Response(
