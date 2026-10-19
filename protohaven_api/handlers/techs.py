@@ -578,18 +578,6 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
     if action != "register":
         return Response("action must be 'register'", status=400)
 
-    # Legacy admin registration by Neon ID is still supported
-    attendee_neon_id_raw = data.get("attendee_neon_id")
-    attendee_neon_id = (
-        str(attendee_neon_id_raw).strip()
-        if attendee_neon_id_raw is not None
-        else account_id
-    )
-    if attendee_neon_id != account_id and not am_lead_role():
-        return Response(
-            "Admin privileges required to register another attendee", status=403
-        )
-
     if eventbrite.is_valid_id(event_id):
         evt = eauto.fetch_event(event_id, tickets=True)
         eb_ticket_id = ticket_id or evt.single_registration_ticket_id
@@ -615,7 +603,7 @@ def techs_event_registration():  # pylint: disable=too-many-return-statements,to
             redirect_url += f"?discount={discount_code}"
         return {"redirect_url": redirect_url}
 
-    ret = neon.register_for_event(attendee_neon_id, event_id, ticket_id)
+    ret = neon.register_for_event(account_id, event_id, ticket_id)
     if ret:
         return ret
 
