@@ -193,7 +193,9 @@ def create_event(  # pylint: disable=too-many-arguments,too-many-positional-argu
                 "timezone": "America/New_York",
                 "utc": _utcfmt(sessions[-1][1]),
             },
-            # Venues are separate entities stored on Eventbrite server.
+            # Venues are separate entities stored on Eventbrite server. An event's
+            # age limit is dictated by the age limit configured on its venue, so
+            # select the venue matching the class age limit.
             # https://www.eventbrite.com/platform/api#/reference/venue/list/list-venues-by-organization?console=1
             "venue_id": _venue_id_for_age(age_limit),
             "currency": "USD",
