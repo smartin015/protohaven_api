@@ -436,7 +436,6 @@ class Commands:
                         max_attendees=event.capacity,
                         published=args.publish,
                         logo_id=image_id,
-                        age_limit=event.description["Age Requirement"],
                     )
                 else:
                     result_id = "DRYRUN"

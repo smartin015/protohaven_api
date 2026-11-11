@@ -1,6 +1,6 @@
 """Tests for eventbrite integration"""
 
-# pylint: disable=protected-access,duplicate-code,too-many-lines
+# pylint: disable=protected-access,duplicate-code
 
 import json
 import tarfile
@@ -477,35 +477,9 @@ def test_generate_discount_code_missing_code_raises(mocker):
         e.generate_discount_code(evt_id="456", percent_off=25)
 
 
-def test_venue_id_for_age(mocker):
-    """Venue selection follows the age-limit mapping"""
-    config = {
-        "eventbrite/venue_id_16_plus": "103409419",
-        "eventbrite/venue_id_12_plus": "146623129",
-        "eventbrite/venue_id_other": "147014129",
-    }
-    mocker.patch.object(e, "get_config", side_effect=config.get)
-
-    assert e._venue_id_for_age("16+") == "103409419"
-    assert e._venue_id_for_age("12+") == "146623129"
-    assert e._venue_id_for_age("8+") == "147014129"
-    assert e._venue_id_for_age(None) == "147014129"
-    assert e._venue_id_for_age("") == "147014129"
-    assert e._venue_id_for_age(" 16+ ") == "103409419"
-
-
 def test_create_event_single_session(mocker):
     """Single-session events get a full Eventbrite create payload"""
-    mocker.patch.object(
-        e,
-        "get_config",
-        side_effect={
-            "eventbrite/organization_id": "test_org_id",
-            "eventbrite/venue_id_16_plus": "103409419",
-            "eventbrite/venue_id_12_plus": "146623129",
-            "eventbrite/venue_id_other": "147014129",
-        }.get,
-    )
+    mocker.patch.object(e, "get_config", return_value="test_org_id")
     mock_conn = mocker.MagicMock()
     mock_conn.eventbrite_request.return_value = {"id": "event_123"}
     mocker.patch.object(e, "get_connector", return_value=mock_conn)
@@ -519,7 +493,6 @@ def test_create_event_single_session(mocker):
         max_attendees=5,
         published=False,
         logo_id=7,
-        age_limit="16+",
     )
 
     assert got == "event_123"

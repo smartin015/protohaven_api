@@ -242,7 +242,6 @@ def test_post_classes_actions(cli, mocker, tc):
         max_attendees=6,
         published=tc.publish,
         logo_id=9,
-        age_limit="yes",
     )
     assert (
         '<p><img height="200" src="http://testimg"/></p>'

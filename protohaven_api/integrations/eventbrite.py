@@ -155,19 +155,6 @@ def _utcfmt(d: datetime.datetime) -> str:
     )
 
 
-def _venue_id_for_age(age_limit: str | None = None) -> str:
-    """Return the Eventbrite venue ID for the given class age limit.
-
-    Venue IDs are configurable so they can be updated without code changes.
-    """
-    age = (age_limit or "").strip()
-    if age == "16+":
-        return str(get_config("eventbrite/venue_id_16_plus"))
-    if age == "12+":
-        return str(get_config("eventbrite/venue_id_12_plus"))
-    return str(get_config("eventbrite/venue_id_other"))
-
-
 def create_event(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     name: str,
     sessions: list[Interval],
@@ -175,7 +162,6 @@ def create_event(  # pylint: disable=too-many-arguments,too-many-positional-argu
     max_attendees: int = 6,
     published: bool = True,
     logo_id: int | None = None,
-    age_limit: str | None = None,
 ) -> EventbriteID:
     """Create an event in Eventbrite, possibly creating an Event Series if there are
     multiple sessions."""
@@ -193,11 +179,10 @@ def create_event(  # pylint: disable=too-many-arguments,too-many-positional-argu
                 "timezone": "America/New_York",
                 "utc": _utcfmt(sessions[-1][1]),
             },
-            # Venues are separate entities stored on Eventbrite server. An event's
-            # age limit is dictated by the age limit configured on its venue, so
-            # select the venue matching the class age limit.
+            # Venues are separate entities stored on Eventbrite server. This assumes
+            # we're always hosting at Protohaven
             # https://www.eventbrite.com/platform/api#/reference/venue/list/list-venues-by-organization?console=1
-            "venue_id": _venue_id_for_age(age_limit),
+            "venue_id": "103409419",
             "currency": "USD",
             "listed": published,
             "show_remaining": True,
