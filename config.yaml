@@ -307,6 +307,9 @@ eventbrite:
   base_url: "https://www.eventbriteapi.com/v3/"
   token: ${EVENTBRITE_TOKEN}
   organization_id: ${EVENTBRITE_ORG_ID}
+  venue_id_16_plus: "${EVENTBRITE_VENUE_ID_16_PLUS}"
+  venue_id_12_plus: "${EVENTBRITE_VENUE_ID_12_PLUS}"
+  venue_id_other: "${EVENTBRITE_VENUE_ID_OTHER}"
 booked:
   id: ${BOOKED_ID}
   key: ${BOOKED_KEY}
