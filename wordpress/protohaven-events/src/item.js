@@ -115,7 +115,7 @@ export function Item( {title, area, desc, levelDesc, age, features, img, times, 
 			<div className="ph-features">
 				<FmtTimes times={times} expanded={expanded} onExpand={setExpanded} user={user} base_url={base_url}/>
 				<div>{hours}</div>
-				<div>Ages {age}+</div>
+				{(age !== null && age !== undefined) && <div>Ages {age}+</div>}
 				<div>{levelDesc}</div>
 			</div>
 			<button className="ph-footer" onClick={() => gotoURL(link, user, base_url)} disabled={valid_ticketing && !total_remaining}>

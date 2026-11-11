@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { Item } from './item';
 
-function renderItem( user ) {
+function renderItem( user, props = {} ) {
 	const times = [
 		[
 			'evt123',
@@ -25,7 +25,7 @@ function renderItem( user ) {
 			area: 'Test Area',
 			desc: 'Test Description',
 			levelDesc: 'Beginner Skills',
-			age: 16,
+			age: Object.prototype.hasOwnProperty.call( props, 'age' ) ? props.age : 16,
 			features: null,
 			img: null,
 			times,
@@ -54,5 +54,10 @@ describe( 'Item links', () => {
 	test( 'date and more links go directly to Eventbrite when not logged in', () => {
 		const html = renderItem( {} );
 		expect( count( html, EVENTBRITE_URL ) ).toBe( 2 );
+	} );
+
+	test( 'does not render age restrictions when age is unknown', () => {
+		const html = renderItem( {}, { age: null } );
+		expect( html ).not.toContain( 'Ages ' );
 	} );
 } );

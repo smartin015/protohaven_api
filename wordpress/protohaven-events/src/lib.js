@@ -160,7 +160,7 @@ export function process(events, classes, areas, levels) {
 			features: null,
 			desc: null,
 			img: e.image_url || null,
-			age: 16,
+			age: null,
 			times: {},
 		};
 		if (!c.area && e.area) {
@@ -186,7 +186,9 @@ export function process(events, classes, areas, levels) {
 			if (c.features['Age Requirement']) {
 				let m = c.features['Age Requirement'].match(/\d+/);
 				m = m[0] && parseInt(m[0]) || null;
-				c.age = (m !== null) ? Math.min(m, c.age) : c.age;
+				if (m !== null) {
+					c.age = (c.age === null || c.age === undefined) ? m : Math.min(m, c.age);
+				}
 			}
 		}
 		if (!c.humanized_info && e.humanized_session_info) {
