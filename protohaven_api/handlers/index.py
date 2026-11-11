@@ -13,7 +13,7 @@ from flask_sock import Sock
 from protohaven_api.automation.classes import events as eauto
 from protohaven_api.automation.membership import sign_in
 from protohaven_api.config import get_config, safe_parse_datetime, tznow
-from protohaven_api.integrations import airtable, booked, mqtt, neon
+from protohaven_api.integrations import airtable, booked, eventbrite, mqtt, neon
 from protohaven_api.integrations.data.neon import CustomField
 from protohaven_api.integrations.models import Event, Member
 from protohaven_api.integrations.neon_base import set_custom_fields
@@ -460,11 +460,18 @@ def upcoming_events():
         # or classes without dates
         if not evt.start_date or evt.in_blocklist() or evt.end_date < now:
             continue
+        description = evt.description
+        try:
+            structured = eventbrite.get_structured_content(evt.event_id)
+            if structured:
+                description = structured
+        except RuntimeError as exc:
+            log.warning(f"Failed to fetch structured content for {evt.event_id}: {exc}")
         events.append(
             {
                 "id": evt.event_id,
                 "name": evt.name,
-                "description": evt.description,
+                "description": description,
                 "instructor": evt.instructor_name,
                 "start": evt.start_date.isoformat(),
                 "end": evt.end_date.isoformat(),

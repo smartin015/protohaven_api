@@ -259,6 +259,24 @@ def set_structured_content(event_id: EventbriteID, desc: str, content_version=2)
     return content_version
 
 
+def get_structured_content(event_id: EventbriteID) -> str:
+    """Fetches the full structured content (Overview) for an event.
+
+    Uses the working-version endpoint so events that have not explicitly
+    published their structured content still return their latest modules.
+    """
+    response = get_connector().eventbrite_request(
+        "GET",
+        f"/events/{event_id}/structured_content/edit/",
+        params={"purpose": "listing"},
+    )
+    return "\n".join(
+        module.get("data", {}).get("body", {}).get("text", "")
+        for module in response.get("modules") or []
+        if isinstance(module, dict)
+    )
+
+
 def assign_pricing(
     event_id: EventbriteID, price: int, seats: int, clear_existing: bool = False
 ):

@@ -207,8 +207,14 @@ def test_upcoming_events_formatting_expected_by_wordpress(mocker, client):
         "fetch_upcoming_events",
         return_value=[mock_event],
     )
+    mocker.patch.object(
+        index.eventbrite,
+        "get_structured_content",
+        return_value="Full Description",
+    )
     mock_event.name = "Test Event"
     result = json.loads(client.get("/events/upcoming").data.decode("utf8"))
+    assert result["events"][0]["description"] == "Full Description"
     assert isinstance(result["events"], list)
     for k in (
         "id",
@@ -277,16 +283,57 @@ def test_upcoming_events(mocker, client):
             mock_blocked_event,
         ],
     )
+    mocker.patch.object(
+        index.eventbrite,
+        "get_structured_content",
+        return_value="Full Description",
+    )
     result = json.loads(client.get("/events/upcoming").data.decode("utf8"))
 
     assert len(result["events"]) == 1
     assert result["events"][0]["name"] == "Test Event"
+    assert result["events"][0]["description"] == "Full Description"
     assert result["events"][0]["start"] == d(1, 16).isoformat()
     assert result["events"][0]["humanized_start"] == "Thu, Jan 02, 04:00PM"
     assert result["events"][0]["humanized_session_info"] == "2 Sessions, 3h Each"
     assert result["events"][0]["category"] == "Test Category"
     assert result["events"][0]["level"] == "Test Level"
     assert result["now"] == d(0).isoformat()
+
+
+def test_upcoming_events_structured_content_falls_back_to_summary(mocker, client):
+    """Upcoming events keep the Eventbrite summary when structured content is unavailable"""
+    mocker.patch.object(index, "tznow", return_value=d(0))
+    mock_event = mocker.Mock(
+        event_id="123",
+        description="Test Description",
+        instructor_name="Instructor",
+        display_category="Test Category",
+        display_level="Test Level",
+        start_date=d(1, 16),
+        end_date=d(2, 19),
+        capacity=10,
+        sessions=[(d(1, 16), d(1, 19)), (d(2, 16), d(2, 19))],
+        url="http://example.com",
+        image_url="http://test.net",
+        registration=True,
+        in_blocklist=lambda: False,
+    )
+    mock_event.name = "Test Event"
+    mocker.patch.object(
+        index.eauto,
+        "fetch_upcoming_events",
+        return_value=[mock_event],
+    )
+    mocker.patch.object(
+        index.eventbrite,
+        "get_structured_content",
+        side_effect=RuntimeError("structured content unavailable"),
+    )
+
+    result = json.loads(client.get("/events/upcoming").data.decode("utf8"))
+
+    assert result["events"][0]["description"] == "Test Description"
 
 
 def test_event_ticket_info_eventbrite(mocker, client):

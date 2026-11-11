@@ -167,6 +167,19 @@ def test_post_structured_content():
     assert resp == {"page_version_number": 3}
 
 
+def test_get_structured_content_edit():
+    """Structured content working-version fetch returns modules"""
+    resp = json.loads(
+        e.handle(
+            "GET",
+            "/events/event_1/structured_content/edit/",
+        ).data.decode("utf8")
+    )
+    assert resp == {
+        "modules": [{"data": {"body": {"text": "Structured content for event_1"}}}]
+    }
+
+
 def test_get_attendees():
     """Attendee endpoint returns an empty page by default"""
     resp = json.loads(e.handle("GET", "/events/event_1/attendees/").data.decode("utf8"))

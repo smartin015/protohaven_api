@@ -103,6 +103,14 @@ def post_structured_content(evt_id, content_version):  # pylint: disable=unused-
     return {"page_version_number": int(content_version)}
 
 
+@app.route("/events/<evt_id>/structured_content/edit/", methods=["GET"])
+def get_structured_content_edit(evt_id):
+    """Stub Eventbrite structured content working-version fetch"""
+    return {
+        "modules": [{"data": {"body": {"text": f"Structured content for {evt_id}"}}}]
+    }
+
+
 @app.route("/events/<evt_id>/attendees/", methods=["GET"])
 def get_attendees(evt_id):  # pylint: disable=unused-argument
     """Stub Eventbrite attendee list"""

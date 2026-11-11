@@ -1,6 +1,6 @@
 """Tests for eventbrite integration"""
 
-# pylint: disable=protected-access,duplicate-code
+# pylint: disable=protected-access,duplicate-code,too-many-lines
 
 import json
 import tarfile
@@ -575,6 +575,27 @@ def test_set_structured_content_missing_version_raises(mocker):
 
     with pytest.raises(RuntimeError):
         e.set_structured_content("event_1", "Some description")
+
+
+def test_get_structured_content(mocker):
+    """Structured content is fetched from the latest working version"""
+    mock_conn = mocker.MagicMock()
+    mock_conn.eventbrite_request.return_value = {
+        "modules": [
+            {"data": {"body": {"text": "<p>First</p>"}}},
+            {"data": {"body": {"text": "<p>Second</p>"}}},
+        ]
+    }
+    mocker.patch.object(e, "get_connector", return_value=mock_conn)
+
+    got = e.get_structured_content("event_1")
+
+    assert got == "<p>First</p>\n<p>Second</p>"
+    mock_conn.eventbrite_request.assert_called_once_with(
+        "GET",
+        "/events/event_1/structured_content/edit/",
+        params={"purpose": "listing"},
+    )
 
 
 def test_assign_pricing_free_ticket(mocker):
